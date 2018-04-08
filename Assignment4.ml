@@ -134,11 +134,14 @@ let rho_fun=function
 
 let rho_lis=[("x",Integer 3);("y",Integer 4);("z",Boolean true)];;
 
+let rec lookup (env:table) (variable:string)= match env with
+    []-> failwith "Not found"
+|   ((var1,val1)::env')-> if variable=var1 then val1 else lookup env' variable;;
 
 let rec eval rho e=match e with
 Const n->Integer n
 | Bool b-> Boolean b
-| Var x-> rho x
+| Var x-> lookup rho x
 | Abs n-> abs (eval rho n)
 | Succ n-> succ (eval rho n)
 | Pred n-> pred (eval rho n)
@@ -223,16 +226,23 @@ let rec execute (s,e,c,d)=match (s,e,c,d) with
 | ((Boolean b)::s',e',RET::c',(s1,e1,c1)::d')-> execute((Boolean b)::s1,e1,c1,d')
 | _->raise EmptyStack;;
 
-let rec lookup (env:table) (variable:string)= match env with
-    []-> failwith "Not found"
-|   ((var1,val1)::env')-> if variable=var1 then val1 else lookup env' variable;;
-
-let rec call_by_name= function
-    |(Closure(envm, Const n),s)-> Integer n
-    |(Closure(envm, Bool n),s)-> Boolean n
+(*
+let rec call_by_name (a,b)=match (a,b) with
+  (* (Closure(envm, Const n),s)-> Integer n   *)
+  (* (Closure(envm, Bool n),s)-> Boolean n  *)
     |(Closure(envm, Var v),s)-> lookup envm v
-    |(Closure(envm, Lambda(Var var,exp)),Closure(a,b)::s)->(call_by_name (Closure((var,Closure(a,b))::envm,exp),s))
-    |(Closure(envm, Compose(exp1, exp2)),s)-> call_by_name (Closure(envm,exp1),Closure(envm,exp2)::s)
+    |(Closure(envm, Lambda(Var var,exp)),cl::s)->(call_by_name (Closure(cl::envm,exp),s))
+    |(Closure(envm, Compose(exp1, exp2)),s)-> (call_by_name (Closure(envm,exp1),((Closure(envm,exp2))::s)))
+    | _-> failwith "Cannot be evaluated";; *)
+
+let rec call_by_name (a,b)=match (a,b) with
+ (* (Closure(envm, Const n),s)-> Integer n   *)
+      (* (Closure(envm, Bool n),s)-> Boolean n  *)
+    |(Closure(envm, Var v),s)-> lookup envm v
+    |(Closure(envm, Lambda(Var var,exp)),Closure(env,ex)::s)->(call_by_name (Closure((var,eval env ex)::envm,exp),s))
+    |(Closure(envm, Compose(exp1, exp2)),s)-> (call_by_name (Closure(envm,exp1),Closure(envm,exp2)::s))
+    |(Closure(envm, ex),s)-> eval envm ex
     | _-> failwith "Cannot be evaluated";;
+
 
 let krivine_eval env expr= call_by_name (Closure(env,expr),[]);;
