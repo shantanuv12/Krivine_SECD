@@ -2,7 +2,8 @@ exception Unmatch;;
 exception EmptyStack;;
 open List;;
 type var=string;;
-type exp =Const of int
+type exp =| If_then_else of exp* exp * exp
+          | Const of int
           | Bool of bool
           | Abs of exp
           | Var of var
@@ -55,13 +56,12 @@ type opcode =CONST of int
             | CLOS of (exp * (opcode list))
             | APP;;
 
-type value=Integer of int| Boolean of bool | Tuple of value list| Closure of (table * exp) | Clos of (table * var * (opcode list))
+type value=Integer of int| Boolean of bool | Tuple of value list| Clos of (table * var * (opcode list))
 and table = (var * value) list;;
 
 type stack = value list;;
 
 type dump= (stack * table * opcode list) list;;
-
 
 let add (e1,e2)=match (e1,e2) with
 (Integer n1,Integer n2)->Integer (n1+n2)
@@ -225,24 +225,3 @@ let rec execute (s,e,c,d)=match (s,e,c,d) with
 | ((Integer n1)::s',e',RET::c',(s1,e1,c1)::d')-> execute((Integer n1)::s1,e1,c1,d')
 | ((Boolean b)::s',e',RET::c',(s1,e1,c1)::d')-> execute((Boolean b)::s1,e1,c1,d')
 | _->raise EmptyStack;;
-
-(*
-let rec call_by_name (a,b)=match (a,b) with
-  (* (Closure(envm, Const n),s)-> Integer n   *)
-  (* (Closure(envm, Bool n),s)-> Boolean n  *)
-    |(Closure(envm, Var v),s)-> lookup envm v
-    |(Closure(envm, Lambda(Var var,exp)),cl::s)->(call_by_name (Closure(cl::envm,exp),s))
-    |(Closure(envm, Compose(exp1, exp2)),s)-> (call_by_name (Closure(envm,exp1),((Closure(envm,exp2))::s)))
-    | _-> failwith "Cannot be evaluated";; *)
-
-let rec call_by_name (a,b)=match (a,b) with
- (* (Closure(envm, Const n),s)-> Integer n   *)
-      (* (Closure(envm, Bool n),s)-> Boolean n  *)
-    |(Closure(envm, Var v),s)-> lookup envm v
-    |(Closure(envm, Lambda(Var var,exp)),Closure(env,ex)::s)->(call_by_name (Closure((var,eval env ex)::envm,exp),s))
-    |(Closure(envm, Compose(exp1, exp2)),s)-> (call_by_name (Closure(envm,exp1),Closure(envm,exp2)::s))
-    |(Closure(envm, ex),s)-> eval envm ex
-    | _-> failwith "Cannot be evaluated";;
-
-
-let krivine_eval env expr= call_by_name (Closure(env,expr),[]);;
